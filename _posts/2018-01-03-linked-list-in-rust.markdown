@@ -5,20 +5,15 @@ date:   2018-01-03 11:57:48 +0530
 categories: rust data-structure
 ---
 
-I never actually implemented any data structure in Rust from scratch. So, I 
-thought why not spend a couple of hours doing that last weekend.
+I have never actually implemented any data structure in Rust from scratch. So, I thought why not spend a couple of hours doing that over the last weekend.
 
 If you don't know already, Rust is a programming language designed to be safe and fast. The compiler requires all programs to be written following certain _ownership_ rules, as they call it and ensures that programs don't access invalid memory. There's more to it, but that would suffice for now.
 
-Linked list would be the best to implement first, I figured. Following is what I did and how I arrived at the result. I will assume you are familiar with generics, types, regular programming constructs like `if`, `for` etc..
+I will assume you are familiar with generics, types, regular programming constructs like `if`, `for` etc.. I will also assume that you have some familiarity with how the borrow checker works.
 
-This is what I am going to do:
+In this post, let's implement a generic list which supports `append` and `remove` operations and later on, ways to extend the list to support more operations.
 
-1. Write a list
-2. Implement methods like append, remove on the list
-3. Ideas to extend the list
-
-Like many languages, Rust supports `struct`s. So let's define our List structure. Our list would contain a length field, and a pointer to the first node. First up, it will only
+Like many languages, Rust supports `struct`s. Let's start by defining our `List` and `Node` structures. Our `List` would contain a length field, and a pointer to the first node. `Node` will contain the actual data along with a pointer to the next `Node`.
 
 ```rust
 struct List<T> {
@@ -32,24 +27,15 @@ struct Node<T> {
 }
 ```
 
-You probably guessed it, but `<T>` denote the use of generic types as in many other languages. `Option` and `Box` must have piqued your interest.
+You probably guessed it, but `<T>` denote the use of generic types as in many other languages.
 
-In Rust, `Box` is a heap-backed pointer type(like an `int *` in C). `Box<T>` is a pointer to the memory location which contains `T`. Also, `Box` is the **owner** of whatever it points to which means that you can change the contents of the memory location pointed to by the `Box` only through it.
+`Option` and `Box` must have piqued your interest.
 
-Next up is `Option`. There is no such thing as a `null` pointer in Rust. So, `Box` always points to some location. `Option` is an enum, which either contains some value denoted by `Some(val)` or `None` which denotes nothing is inside. In this case, we are telling that the head is either a pointer to a `Node` or nothing.
+In Rust, `Box` is a heap-backed pointer type(like a pointer returned by `malloc`). `Box<T>` is a pointer to the memory location which contains a value of type `T`. Also, `Box` is the **owner** of whatever it points to which means that you can change the contents of the memory location pointed to by the `Box` only through it.
 
-There are two ways to create an object. Either use an associated function or directly create a list like this:
+There is no such thing as an empty `Box`. This means that `Box` always points to a valid memory location. To represent a `NULL` pointer, we make use of the `Option` type and wrap our `Box` inside that. `Option` is an enum, which either contains some value denoted by `Some(val)` or `None` which denotes nothing is inside. In this case, we are telling that the head is either a pointer to a `Node` or nothing.
 
-```rust
-fn main() {
-    let list = List {
-        head: None,
-        len: 0usize
-    };
-}
-```
-
-We will go ahead and create an associated function to returns an empty list, then implement other methods to add or remove elements from the list.
+Let's go ahead and create an associated function(similar to a _static method_ in other languages) which will return an empty list. In Rust, we define associated functions and methods for a `struct` inside an `impl` block. We will see why when we implement the `remove` method.
 
 ```rust
 struct Node<T> {
@@ -81,11 +67,7 @@ fn main() {
 $ rustc list.rs
 ```
 
-You tell the compiler that this is the implementation of the list inside which you write the methods that work on the list. The `new` function we defined here is an _associated function_ which is similar to a static function. In our case, `new` acts like a constructor returning an empty list. We will add more methods later on.
-
-The `let` syntax allows you to bind variables to values. Here, we bind `_` to the empty list returned by `new`. You could give any name in place of `_`(go on and try!), but because we are not using it, the compiler would generate a warning. `_` tells the compiler that we are not going to use the value.
-
-Before going on to implement other functionality, let's talk a bit about the ownership rules because they will come into play around this point.
+Before going on to implement other functionality, let's talk a bit about the ownership rules I mentioned above because they will come into play around this point.
 
 In Rust, there's always an owner to a value. If you do `let list = List::new();`, list is the owner of the value returned by `List::new`. If you assign, list to another variable(`list2`) using a `let` expression like below, you can no longer access the `list` variable. You effectively transferred the  **ownership** of the value from `list` to `list2`.
 
@@ -99,7 +81,7 @@ But having only owned values doesn't cut it, so we also have
 * mutable(`&mut T`) references: can modify the contents and 
 * immutable(`&T`) references: can't modify the contents.
 
-Ownership rules ensure that at any time there is either a single mutable reference or multiple immutable references but not both. I won't get into the details why(read the [book][book]), but take it for granted. All programs should follow the rules or they won't compile.
+Ownership rules ensure that at any time there is either a single mutable reference or multiple immutable references but not both. I won't get into the details why(read the [book][book]). All programs should follow the rules or else they won't compile.
 
 ## Appending to the list
 
@@ -139,6 +121,8 @@ impl<T> List<T> {
 }
 ```
 
+Of course, this didn't compile. The reason is that the mutable reference inside the loop should be valid till the end of the method to enable us to do  `head.next = new_node;`. But when we hit the second iteration of the loop, we get another mutable reference which violates the single mutable reference rule. So, `rustc` complains:
+
 ```shell
 $ rustc list.rs
 error[E0499]: cannot borrow `head.next` as mutable more than once at a time
@@ -151,11 +135,9 @@ error[E0499]: cannot borrow `head.next` as mutable more than once at a time
    |     - mutable borrow ends here
 ```
 
-Of course, this didn't compile. The reason is that the mutable reference inside the loop should be valid till the end of the method to enable us to do  `head.next = new_node;`. But when we hit the second iteration of the loop, we get another mutable reference which violates the single mutable reference rule.
-
 ### Attempt #2
 
-After thinking for a while, I came up with an idea along these lines: `move` the `head` out of the `List`, taking _ownership_ of the first node, iterate till the end checking the next pointer for `None` at every node and inserting the new node there. 
+After thinking for a while, I came up with an idea along these lines: _move_ the `head` out of the `List`, taking _ownership_ of the first node, iterate till the end checking the next pointer for `None` at every node and inserting the new node there.
 
 As we move the value out of the list, there would only be a single owner and we can mutate it safely. All good, Rust is happy and so am I! 
 
@@ -208,7 +190,7 @@ fn add_node<T>(node: &mut Node<T>, new_node: Option<Box<Node<T>>>) {
 }
 ```
 
-That's all! You can append a value to our list now.
+That's it! You can append a value to the list now.
 
 ```rust
 fn main() {
@@ -227,9 +209,27 @@ fn main() {
 
 ## Removing from the list
 
-Removing from the list is pretty straightforward, given that we already saw how to implement `append`.
+Removing from the list is pretty straightforward, given that we have already seen how to implement `append`.
 
 ```rust
+struct Node<T> {
+	...
+}
+
+struct List<T> {
+	...
+}
+
+impl<T> List<T> {
+	fn new() -> Self {
+		...
+	}
+
+	fn append(&mut self) {
+		...
+	}
+}
+
 impl<T: PartialOrd> List<T> {
     fn remove(&mut self, data: T) {
         if let Some(mut head) = self.head.take() {
@@ -267,15 +267,17 @@ fn remove_node<T: PartialOrd>(node: &mut Node<T>, data: T) -> bool {
 }
 ```
 
-Perhaps, the most interesting thing here is the new syntax: `impl<T: PartialOrd>` which reads - implement a remove method for this list if the underlying type `T` can be compared using `==`. `PartialOrd` is a **trait** (similar to an interface) and `T: PartialOrd` is a _trait bound_ on `T`.
+Perhaps, the most interesting thing here is the new syntax: `impl<T: PartialOrd>` which says - implement the `remove` method for this list if the underlying type `T` can be compared using `==`. [PartialOrd][partialord] is a **trait** (similar to an _interface_) and `T: PartialOrd` is a _trait bound_ on `T`.
+
+With multiple `impl` blocks having different trait bounds, we can implement additional functionality for our list depending on what the underlying type supports.
 
 At this point, you are probably bored reading stuff and want to do something on your own. Try changing our append only list to be able to insert/remove element at an index.
-
-**Hint**: change the `add_node`/`remove_node` function to take an index parameter reducing at every level in recursion and inserting/removing when it hits `0`.
 
 You can find the full code sample [here][gist]. If you find any mistakes or have suggestions, I am all ears.
 
 
 [book]: https://doc.rust-lang.org/stable/book/second-edition/ch04-00-understanding-ownership.html
+
+[partialord]: https://doc.rust-lang.org/std/cmp/trait.PartialOrd.html
 
 [gist]: https://gist.github.com/letmutx/64dbcf77518fe4991f4eea85960c9dee
