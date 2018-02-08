@@ -1,0 +1,20 @@
+---
+layout: post
+title:  "Boredom"
+date:   2018-02-09 12:57:48 +0530
+categories: personal
+---
+
+
+Of late, things are going on pretty dull. January was pretty exciting - had [something](https://github.com/letmutx/code-executor) to work on which kept me busy, good health, books and some other stuff I don't recall. Now my head is totally empty and that means: *boredom*.
+
+And boredom is pure evil. Period. It is the single most dreadful feeling - to not do anything. Thankfully, I don't have to worry about existential needs on a daily basis. I can manage for a month or so. That leaves room for leisure which needs to be filled. Leisure almost always leads to boredom. I have a lot of trouble filling up that space even if half of the internet's purpose is to keep people engaged.
+
+Back in the time, I used to be a *passive* soul: read, watch, listen; but that doesn't work anymore. I am trying to be more active: write, talk. Still not there yet but there's hope!
+
+The best way to kill boredom is to write something. I would invariably introduce bugs if I write something. And bugs are the best! They get into your head like an earworm and play over and over again leaving no room to be bored. I like that, in a sense. But I have very high initial resistance to something new - in other words: can't just pick some random idea and write it or prepare for some hypothetical whatever. Totally my fault; should try to get over it.
+
+
+{That was basically a time-killer post. Thanks for surviving this far.}
+
+
