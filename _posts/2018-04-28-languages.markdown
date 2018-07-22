@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Types of languages"
-date:   2018-14-28 11:57:48 +0530
+date:   2018-04-28 11:57:48 +0530
 categories: programming languages
 ---
 
