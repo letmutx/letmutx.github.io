@@ -5,11 +5,11 @@ date:   2018-09-17 11:57:48 +0530
 categories: c data-structure
 ---
  
-I have heard of van Emde Boas trees only recently and after learning that it supports most of the set operations in `O(lglg(u))`(u is the range of the elements we can insert in the tree as opposed to the number of elements in the tree). I was very curious as to why people aren't using this every where? So, I decided to learn how they work and this is what I learned.
+I have heard of van Emde Boas trees only recently and after learning that it supports most of the set operations in `O(loglog(u))`(u is the range of the elements we can insert in the tree as opposed to the number of elements in the tree). I was very curious as to why people aren't using this every where? So, I decided to learn how they work and this is what I learned.
   
 ## What are we trying to solve?
  
-We want to do fast insert, delete, member, successor, predecessor operations. Widely used solutions are balanced binary search trees which offer `O(lg(n))` time on all these operations.
+We want to do fast insert, delete, member, successor, predecessor operations. Widely used solutions are balanced binary search trees which offer `O(log(n))` time on all these operations.
  
 ## Can we do better?
  
@@ -88,15 +88,15 @@ O(2**m) = O(sqrt(2**m)) + O(1)
 
 If we take logarithm on both sides,
 ```
-O(lg(2**m)) = O(lg(2**(m/2))) + O(1)
+O(log(2**m)) = O(log(2**(m/2))) + O(1)
        O(m) = O(m/2) + O(1)
 ```
 
-Substituting `m = lg(u)` back in the equation, we have `O(lg(u)) = O(lg(u)/2) + O(1)` whose solution is `O(lglg(u))`
+Substituting `m = log(u)` back in the equation, we have `O(log(u)) = O(log(u)/2) + O(1)` whose solution is `O(loglog(u))`
  
 ## Conclusion:
  
-Now we have a data structure which supports insert, delete, find and successor all in `O(lglg(u))` time, yay!
+Now we have a data structure which supports insert, delete, find and successor all in `O(loglog(u))` time, yay!
  
 But if it is so good, why isn't it so popular like balanced binary search trees? Well, because they take up a huge amount of space. `O(u)` where u is the range of the values. There are ways to reduce the space usage to `O(n)` where n is the number of elements. Also, vEB trees also only suitable for integer values.
  
