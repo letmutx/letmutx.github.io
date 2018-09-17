@@ -1,0 +1,107 @@
+---
+layout: post
+title:  "vEB trees - a set data structure"
+date:   2018-09-17 11:57:48 +0530
+categories: c data-structure
+---
+ 
+I have heard of van Emde Boas trees only recently and after learning that it supports most of the set operations in `O(lglg(u))`(u is the range of the elements we can insert in the tree as opposed to the number of elements in the tree). I was very curious as to why people aren't using this every where? So, I decided to learn how they work and this is what I learned.
+  
+## What are we trying to solve?
+ 
+We want to do fast insert, delete, member, successor, predecessor operations. Widely used solutions are balanced binary search trees which offer `O(lg(n))` time on all these operations.
+ 
+## Can we do better?
+ 
+Yes, of course. vEB-trees are heavily inspired by bit-vector based solution, so let's start there. We have a single array of bits. A bit vector is just like an array of bytes but instead of storing a 1 or 0 in a whole byte to denote if that member is present or not, we do the same operation at bit-level.
+ 
+insert(5) -> turn on the 5th bit in the array; `O(1)`<br/>
+delete(8) -> turn off the 8th bit in the array; `O(1)`<br/>
+member(8) -> check if the 8th bit is on; `O(1)`<br/>
+successor(7) -> find a bit after 7th position which is on; `O(u)` because in the worst case we need to iterate through the entire bit array looking for a bit which is on.
+predecessor is symmetric to the successor problem.<br/>
+space - `O(u)`, because we need to have the bit array of size u where u is the range of the values supported in the set.<br/>
+ 
+`O(1)` for insert, delete, finding a member is great but how might we go about making successor more efficient? vEB starts by splitting the bit array into smaller chunks of size `sqrt(u)` called clusters(total of `sqrt(u)` clusters) and augments the clusters by saving the min and max elements present in the cluster.
+ 
+With that we now don't have to search the whole `O(u)` array to find the successor, only the cluster into which the member falls or if the current member is the largest element, the minimum value of the next non-empty cluster. Now, the complexity of the search becomes `O(sqrt(u))` for successor. Also, we need to to keep track of empty and non-empty clusters: amusingly, this data structure also needs to support fast successor, predecessor and can be modeled as another vEB-tree. insert, delete and member operations have to do extra operations - updating the summary structure and min, max values.
+ 
+```
+def successor(veb_tree *t, value):
+    cluster = get_cluster(t, value)
+    if cluster->max < value:
+        return find_next(cluster, value) # O(sqrt(u)) worst case
+    else:
+        next_cluster = find_next_non_empty_cluster(t, value) # O(sqrt(u)) worst case
+    return next_cluster->min
+```
+
+ 
+That leaves us with `O(sqrt(u))` but we want more! The choice of `sqrt(u)` for the cluster size can also be justified from this algorithm because both the branches take equal amount of time because of this.
+ 
+If we look at a single `sqrt(u)` sized cluster, it is a smaller version of the initial problem we set out to solve. And so, we can again divide the individual clusters just like we did for the bigger one and recursively do that until the size of a cluster is a single element. That means every single cluster is itself a vEB tree of size `sqrt(u)`. With this, as we go down towards the leaves of the tree, the search space reduces sqrt times the problem we have at the parent level.
+ 
+We also need to update our insert and delete to account for this - they need to recursively find a position to insert or delete the required element and update the metadata in the tree.
+ 
+```
+struct veb_tree {
+    int min, max;
+    struct veb_tree *summary;
+    int range;
+    struct veb_tree **clusters;
+};
+ 
+def insert(veb_tree *tree, value):
+    # base case leaf element
+    if t->min == -1:
+        t->max = t->min = value
+        return
+    # update min and max values
+    if x < t->min:
+        swap(&value, &t->min)
+    if x > t->max:
+        swap(&value, &t->max)
+    cluster = get_cluster(t, value)
+    if cluster.summary.min is not already updated:
+        update_summary(cluster->summary, value)
+    insert(cluster, value)
+ 
+def successor(veb_tree *tree, value):
+    if tree->min > x:
+        return t->min;
+    highx = high(x, t->range)
+    lowx = low(x, t->range)
+    if tree->max > x:
+        return successor(t->clusters[highx], lowx)
+    sindex = successor(t->summary, highx)
+    return t->clusters[sindex]->min
+```
+
+Because we're dividing the search space by `sqrt(u)` times at every step, the recursion can be modelled as
+`O(u) = O(sqrt(u)) + O(1)`
+ 
+u is usually a huge number, so assuming it to be `2**m`, then
+```
+O(2**m) = O(sqrt(2**m)) + O(1)
+        = O(2**(m/2)) + O(1)
+``` 
+
+If we take logarithm on both sides,
+```
+O(lg(2**m)) = O(lg(2**(m/2))) + O(1)
+       O(m) = O(m/2) + O(1)
+```
+
+Substituting `m = lg(u)` back in the equation, we have `O(lg(u)) = O(lg(u)/2) + O(1)` whose solution is `O(lglg(u))`
+ 
+## Conclusion:
+ 
+Now we have a data structure which supports insert, delete, find and successor all in `O(lglg(u))` time, yay!
+ 
+But if it is so good, why isn't it so popular like balanced binary search trees? Well, because they take up a huge amount of space. `O(u)` where u is the range of the values. There are ways to reduce the space usage to `O(n)` where n is the number of elements. Also, vEB trees also only suitable for integer values.
+ 
+You can see my sample implementation [here][gist]. If you want to learn more, here are some references: [notes][notes] and [lecture][lecture] from OCW. As always, let me know if you find any mistakes.
+ 
+[gist]: https://gist.github.com/letmutx/1a6255a6a154bc22c7e0d7b5bc6f17b0
+[notes]: https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-046j-design-and-analysis-of-algorithms-spring-2015/lecture-notes/MIT6_046JS15_writtenlec4.pdf
+[lecture]: https://www.youtube.com/watch?v=hmReJCupbNU&t=0s&index=7&list=PLUl4u3cNGP6317WaSNfmCvGym2ucw3oGp
